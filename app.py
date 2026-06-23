@@ -1,24 +1,37 @@
 import streamlit as st
 import joblib
+import os
 import re
-import numpy as np
-import pandas as pd
+
+st.set_page_config(page_title="Language Detection", page_icon="🌐")
+
+st.title("🌐 Language Detection System")
 
 # =====================
-# PAGE CONFIG
+# CHECK FILES FIRST
 # =====================
-st.set_page_config(
-    page_title="Language Detection System",
-    page_icon="🌐",
-    layout="wide"
-)
+required_files = [
+    "language_model.pkl",
+    "vectorizer.pkl",
+    "label_encoder.pkl"
+]
+
+for file in required_files:
+    if not os.path.exists(file):
+        st.error(f"❌ Missing file: {file}")
+        st.stop()
 
 # =====================
-# LOAD MODELS
+# LOAD MODELS SAFELY
 # =====================
-model = joblib.load("language_model.pkl")
-vectorizer = joblib.load("vectorizer.pkl")
-encoder = joblib.load("label_encoder.pkl")
+@st.cache_resource
+def load_models():
+    model = joblib.load("language_model.pkl")
+    vectorizer = joblib.load("vectorizer.pkl")
+    encoder = joblib.load("label_encoder.pkl")
+    return model, vectorizer, encoder
+
+model, vectorizer, encoder = load_models()
 
 # =====================
 # CLEAN TEXT
@@ -32,93 +45,19 @@ def clean_text(text):
     return text.strip()
 
 # =====================
-# SIDEBAR MENU
+# UI
 # =====================
-menu = st.sidebar.radio(
-    "🌐 Navigation",
-    ["🏠 Home", "📊 Dataset Info", "📈 Model Performance", "🔮 Prediction", "ℹ️ About"]
-)
+text = st.text_area("Enter Text")
 
-# =====================
-# HOME PAGE
-# =====================
-if menu == "🏠 Home":
-    st.title("🌐 Language Detection System")
-    st.write("Machine Learning based language detection app")
+if st.button("Detect Language"):
 
-    col1, col2, col3 = st.columns(3)
+    if not text.strip():
+        st.warning("Enter text first")
 
-    col1.metric("Languages", "17")
-    col2.metric("Dataset Size", "10,000+")
-    col3.metric("Best Model", "Linear SVM")
+    else:
+        cleaned = clean_text(text)
+        vec = vectorizer.transform([cleaned])
+        pred = model.predict(vec)[0]
+        language = encoder.inverse_transform([pred])[0]
 
-    st.success("Go to Prediction page from sidebar")
-
-# =====================
-# DATASET PAGE
-# =====================
-elif menu == "📊 Dataset Info":
-    st.title("📊 Dataset Overview")
-
-    try:
-        df = pd.read_csv("dataset.csv")
-        st.dataframe(df.head(10))
-
-        st.bar_chart(df["language"].value_counts())
-
-    except:
-        st.warning("dataset.csv file not found")
-
-# =====================
-# MODEL PAGE
-# =====================
-elif menu == "📈 Model Performance":
-    st.title("📈 Model Accuracy")
-
-    data = {
-        "Model": ["Linear SVM", "KNN", "Naive Bayes"],
-        "Accuracy": [98.7, 95.2, 93.5]
-    }
-
-    df = pd.DataFrame(data)
-    st.dataframe(df)
-
-    st.bar_chart(df.set_index("Model"))
-
-# =====================
-# PREDICTION PAGE
-# =====================
-elif menu == "🔮 Prediction":
-    st.title("🔮 Live Language Prediction")
-
-    text = st.text_area("Enter Text")
-
-    if st.button("Detect Language"):
-
-        if not text.strip():
-            st.warning("Please enter text")
-
-        elif len(text.split()) < 2:
-            st.warning("Enter at least 2-3 words")
-
-        else:
-            cleaned = clean_text(text)
-            vec = vectorizer.transform([cleaned])
-            pred = model.predict(vec)[0]
-            language = encoder.inverse_transform([pred])[0]
-
-            st.success(f"✅ Predicted Language: {language}")
-
-# =====================
-# ABOUT PAGE
-# =====================
-elif menu == "ℹ️ About":
-    st.title("ℹ️ About Project")
-
-    st.write("""
-    - Machine Learning Project
-    - Language Detection using NLP
-    - Models: SVM, KNN, Naive Bayes
-    """)
-
-    st.info("Developed by: Umair Naqvi")
+        st.success(f"✅ Predicted Language: {language}")
