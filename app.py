@@ -1,63 +1,74 @@
 import streamlit as st
 import joblib
-import os
 import re
 
-st.set_page_config(page_title="Language Detection", page_icon="🌐")
+# ==========================
+# PAGE CONFIG
+# ==========================
+st.set_page_config(
+    page_title="Language Detection System",
+    page_icon="🌐",
+    layout="centered"
+)
 
-st.title("🌐 Language Detection System")
+# ==========================
+# LOAD MODELS
+# ==========================
+model = joblib.load("language_model.pkl")
+vectorizer = joblib.load("vectorizer.pkl")
+encoder = joblib.load("label_encoder.pkl")
 
-# =====================
-# CHECK FILES FIRST
-# =====================
-required_files = [
-    "language_model.pkl",
-    "vectorizer.pkl",
-    "label_encoder.pkl"
-]
-
-for file in required_files:
-    if not os.path.exists(file):
-        st.error(f"❌ Missing file: {file}")
-        st.stop()
-
-# =====================
-# LOAD MODELS SAFELY
-# =====================
-@st.cache_resource
-def load_models():
-    model = joblib.load("language_model.pkl")
-    vectorizer = joblib.load("vectorizer.pkl")
-    encoder = joblib.load("label_encoder.pkl")
-    return model, vectorizer, encoder
-
-model, vectorizer, encoder = load_models()
-
-# =====================
-# CLEAN TEXT
-# =====================
+# ==========================
+# CLEAN TEXT FUNCTION
+# ==========================
 def clean_text(text):
     text = str(text).lower()
     text = re.sub(r"http\S+", "", text)
     text = re.sub(r"www\S+", "", text)
     text = re.sub(r"\d+", "", text)
+    text = re.sub(r"[^\w\s]", "", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
-# =====================
-# UI
-# =====================
-text = st.text_area("Enter Text")
+# ==========================
+# TITLE
+# ==========================
+st.title("🌐 Language Detection System")
+st.write("Enter any text and detect its language using Machine Learning.")
 
-if st.button("Detect Language"):
+# ==========================
+# INPUT BOX
+# ==========================
+text = st.text_area("Enter Text", height=150)
 
-    if not text.strip():
-        st.warning("Enter text first")
+# ==========================
+# PREDICT BUTTON
+# ==========================
+if st.button("Detect Language 🚀"):
+
+    if text.strip() == "":
+        st.warning("Please enter some text")
 
     else:
         cleaned = clean_text(text)
+
         vec = vectorizer.transform([cleaned])
+
         pred = model.predict(vec)[0]
+
         language = encoder.inverse_transform([pred])[0]
 
-        st.success(f"✅ Predicted Language: {language}")
+        st.success(f"👉 Predicted Language: **{language}**")
+
+# ==========================
+# SIDEBAR INFO
+# ==========================
+st.sidebar.title("ℹ️ About")
+
+st.sidebar.write("""
+This is a Machine Learning project for language detection.
+
+- Model: Logistic Regression / SVM  
+- Vectorizer: TF-IDF (Character n-grams)  
+- Accuracy: High precision text classification
+""")
