@@ -1,3 +1,9 @@
+import warnings
+warnings.filterwarnings("ignore")
+
+import streamlit as st
+import os
+import joblib
 import streamlit as st
 import joblib
 import os
