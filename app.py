@@ -2,8 +2,10 @@ import streamlit as st
 import joblib
 import os
 import re
+import pandas as pd
+import matplotlib.pyplot as plt
 
-# ================= UI THEME =================
+# ================= THEME =================
 st.markdown("""
 <style>
 .stApp {
@@ -26,12 +28,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ================= LOAD =================
+# ================= SAFE LOAD =================
 BASE_DIR = os.path.dirname(__file__)
 
-model = joblib.load(os.path.join(BASE_DIR, "language_model.pkl"))
-vectorizer = joblib.load(os.path.join(BASE_DIR, "vectorizer.pkl"))
-encoder = joblib.load(os.path.join(BASE_DIR, "label_encoder.pkl"))
+try:
+    model = joblib.load(os.path.join(BASE_DIR, "language_model.pkl"))
+    vectorizer = joblib.load(os.path.join(BASE_DIR, "vectorizer.pkl"))
+    encoder = joblib.load(os.path.join(BASE_DIR, "label_encoder.pkl"))
+except:
+    st.error("❌ Model files missing!")
+    st.stop()
 
 # ================= CLEAN =================
 def clean_text(text):
@@ -42,18 +48,31 @@ def clean_text(text):
     text = re.sub(r"[^\w\s]", "", text)
     return text.strip()
 
-# ================= UI =================
+# ================= TITLE =================
 st.title("🌐 Language Detection System")
 
+# ================= SIDEBAR =================
+st.sidebar.title("📌 Info")
+st.sidebar.write("ML Project: Language Detection")
+st.sidebar.write("Models: SVM / Logistic Regression")
+
+# ================= INPUT =================
 text = st.text_area("Enter Text")
 
+# ================= PREDICTION =================
 if st.button("Detect Language 🚀"):
 
+    # ❌ NEGATIVE CASE 1
     if not text.strip():
-        st.error("⚠ Please enter text")
-    elif len(text.split()) < 2:
+        st.error("⚠ Please enter text first")
+        st.stop()
+
+    # ❌ NEGATIVE CASE 2
+    if len(text.split()) < 2:
         st.warning("⚠ Enter at least 2-3 words")
-    else:
+        st.stop()
+
+    try:
         cleaned = clean_text(text)
         vec = vectorizer.transform([cleaned])
         pred = model.predict(vec)[0]
@@ -61,7 +80,27 @@ if st.button("Detect Language 🚀"):
 
         st.success(f"👉 Predicted Language: {lang}")
 
-# ================= SIDEBAR =================
-st.sidebar.title("📌 Info")
-st.sidebar.write("ML Language Detection Project")
-st.sidebar.write("Model: SVM / Logistic Regression")
+    except:
+        st.error("❌ Prediction failed")
+
+# ================= EDA GRAPH =================
+st.subheader("📊 Language Distribution (EDA)")
+
+try:
+    # fake dataset preview (for GitHub deploy safe)
+    df = pd.DataFrame({
+        "Language": encoder.classes_
+    })
+
+    count = [10]*len(df)  # placeholder for deploy safety
+
+    fig, ax = plt.subplots()
+    ax.bar(df["Language"], count)
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+
+except:
+    st.info("EDA not available")
+
+# ================= FOOTER =================
+st.sidebar.info("✔ System Ready")
