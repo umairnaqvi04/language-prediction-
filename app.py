@@ -38,9 +38,16 @@ st.markdown("""
 BASE_DIR = os.path.dirname(__file__)
 
 try:
+    BASE_DIR = os.path.dirname(__file__)
+
+try:
     model = joblib.load(os.path.join(BASE_DIR, "language_model.pkl"))
     vectorizer = joblib.load(os.path.join(BASE_DIR, "vectorizer.pkl"))
     encoder = joblib.load(os.path.join(BASE_DIR, "label_encoder.pkl"))
+except Exception as e:
+    st.error("❌ Model load failed")
+    st.write(e)
+    st.stop()
 except:
     st.error("❌ Model files missing!")
     st.stop()
